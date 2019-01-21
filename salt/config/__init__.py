@@ -658,6 +658,13 @@ VALID_OPTS = {
     's3fs_update_interval': int,
     'svnfs_update_interval': int,
 
+    # Various verification options for the `test_verified_filelist` unittest.
+    'gitfs_verification:': list,
+    'gitfs_method': six.string_types,
+    'gitfs_gpg_keydir': six.string_types,
+    'gitfs_strictness': six.string_types,
+    'gitfs_trust_model': six.string_types,
+
     # NOTE: git_pillar_base, git_pillar_branch, git_pillar_env, and
     # git_pillar_root omitted here because their values could conceivably be
     # loaded as non-string types, which is OK because git_pillar will normalize
@@ -1332,6 +1339,11 @@ DEFAULT_MINION_OPTS = {
     'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
     'gitfs_disable_saltenv_mapping': False,
+    'gitfs_verification': [],
+    'gitfs_verification_method': 'pgp',
+    'gitfs_verification_gpg_keydir': '/etc/salt/minion.d/gitfs_keydir',
+    'gitfs_verification_strictness': 'continuous',
+    'gitfs_verification_trust_model': 'direct',
     'unique_jid': False,
     'hash_type': 'sha256',
     'optimization_order': [0, 1, 2],
@@ -1591,6 +1603,11 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
     'gitfs_disable_saltenv_mapping': False,
+    'gitfs_verification': [],
+    'gitfs_verification_method': 'pgp',
+    'gitfs_verification_gpg_keydir': '/etc/salt/master.d/gitfs_keydir',
+    'gitfs_verification_strictness': 'continuous',
+    'gitfs_verification_trust_model': 'direct',
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',

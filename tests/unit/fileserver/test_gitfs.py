@@ -63,8 +63,12 @@ log = logging.getLogger(__name__)
 
 TMP_SOCK_DIR = tempfile.mkdtemp(dir=TMP)
 TMP_REPO_DIR = os.path.join(TMP, 'gitfs_root')
+#TMP_VERIFICATION_REPO_DIR = os.path.join(TMP, 'gitfs_verification_root', 'gpg.unittest.git')
+TMP_VERIFICATION_REPO_DIR = os.path.join(TMP, 'gitfs_verification_root')
+TMP_GPG_KEYDIR = os.path.join(TMP, 'gitfs_verification_root', 'gpg_keydir')
 if salt.utils.platform.is_windows():
     TMP_REPO_DIR = TMP_REPO_DIR.replace('\\', '/')
+    TMP_VERIFICATION_REPO_DIR = TMP_VERIFICATION_REPO_DIR.replace('\\', '/')
 INTEGRATION_BASE_FILES = os.path.join(FILES, 'file', 'base')
 UNICODE_FILENAME = 'питон.txt'
 UNICODE_DIRNAME = UNICODE_ENVNAME = 'соль'
@@ -99,6 +103,9 @@ OPTS = {
     'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_update_interval': 60,
     '__role': 'master',
+    'gitfs_remotes_verification': {
+        'enabled': False,
+    },
 }
 
 
@@ -384,6 +391,36 @@ class GitFSTestFuncs(object):
             # the envs list, but the branches should not.
             self.assertEqual(ret, ['base', 'world'])
 
+    def test_verified_filelist(self):
+        '''
+        Test whether all commits of the given branch are properly and trustworthy signed.
+        '''
+        opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            gitfs_remotes:
+              - file://{0}:
+                - disable_saltenv_mapping: True
+                - saltenv:
+                  - base:
+                    - ref: verified_filelist
+                - gitfs_verification:
+                    - method: pgp
+                    - pgp_configuration:
+                        - gpg_keydir: {1}
+                        - method: commits
+                        - strictness: continuous
+                        - trust_model: direct
+            '''.format(os.path.join(TMP_VERIFICATION_REPO_DIR, 'gpg.unittest.git'), TMP_GPG_KEYDIR)))
+            #gitfs_remotes:
+            #  - file://{0}:
+            #    - disable_saltenv_mapping: True
+            #    - saltenv:
+            #      - base:
+            #        - ref: master
+            #'''.format(os.path.join(TMP_VERIFICATION_REPO_DIR, 'gpg.unittest.git'))))
+        with patch.dict(gitfs.__opts__, opts):
+            gitfs.update()
+            ret = gitfs.file_list(LOAD)
+            self.assertIn('test1.txt', ret)
 
 class GitFSTestBase(object):
 
@@ -394,14 +431,18 @@ class GitFSTestBase(object):
 
         try:
             shutil.rmtree(TMP_REPO_DIR)
+            shutil.rmtree(TMP_VERIFICATION_REPO_DIR)
         except OSError as exc:
             if exc.errno == errno.EACCES:
-                log.error("Access error removeing file %s", TMP_REPO_DIR)
+                log.error("Access error removing file %s", TMP_REPO_DIR)
+                log.error("Access error removing file %s", TMP_VERIFICATION_REPO_DIR)
             elif exc.errno != errno.ENOENT:
                 raise
         shutil.copytree(INTEGRATION_BASE_FILES + '/default/', TMP_REPO_DIR + '/')
+        shutil.copytree(INTEGRATION_BASE_FILES + '/gitfs_verification/', TMP_VERIFICATION_REPO_DIR)
 
         repo = git.Repo.init(TMP_REPO_DIR)
+        #verification_repo = git.Repo.init(TMP_VERIFICATION_REPO_DIR, bare=True)
 
         username_key = str('USERNAME')
         orig_username = os.environ.get(username_key)
